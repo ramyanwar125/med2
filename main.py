@@ -1,9 +1,16 @@
-Import os, asyncio, time, threading
+import os, asyncio, time, threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pyrogram import Client, filters
 from pyrogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import UserNotParticipant
 from engine import get_all_formats, run_download
+
+# --- حل مشكلة الـ Event Loop لنظام Render الحديث ---
+try:
+    import nest_asyncio
+    nest_asyncio.apply()
+except:
+    pass
 
 # --- Web Server for Render | خادم ويب لإرضاء منصة ريندر ---
 class HealthCheckHandler(BaseHTTPRequestHandler):
@@ -15,7 +22,6 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
 def run_health_server():
     port = int(os.environ.get("PORT", 8080))
     server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
-    print(f"Health check server started on port {port}")
     server.serve_forever()
 
 # --- Config | الإعدادات ---
@@ -28,10 +34,10 @@ BOT_NAME = "『 ＦＡＳＴ ＭＥＤＩＡ 』"
 CHANNEL_USER = "Fast_Mediia" 
 USERS_FILE = "users_database.txt" 
 
-app = Client("fast_media_v8069", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+app = Client("fast_media_v806019", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 user_cache = {}
 
-# --- Functions | الوظائف ---
+# --- Functions | الوظائف (بكامل تفاصيلها) ---
 def add_user(user_id):
     if not os.path.exists(USERS_FILE): open(USERS_FILE, "w").close()
     users = open(USERS_FILE, "r").read().splitlines()
@@ -76,13 +82,14 @@ async def progress_bar(current, total, status_msg, start_time):
     try: await status_msg.edit(tmp)
     except: pass
 
-# --- Handlers | الأوامر ---
+# --- Handlers | الأوامر (بكامل تفاصيلها) ---
 @app.on_message(filters.command("start") & filters.private)
 async def start(client, message):
     if not await check_subscription(client, message): return
     add_user(message.from_user.id)
     kb = [['🔄 Restart Service | بدء الخدمة'], ['👨‍💻 Developer | المطور']]
-    if message.from_user.id == ADMIN_ID: kb[1].append('📣 Broadcast | إذاعة')
+    if message.from_user.id == ADMIN_ID:
+        kb.append(['📣 Broadcast | إذاعة'])
     
     welcome_text = (
         f"✨━━━━━━━━━━━━━✨\n"
@@ -155,7 +162,6 @@ async def download_cb(client, callback_query):
             else: 
                 await client.send_video(user_id, file_path, caption=f"🎬 **Video by {BOT_NAME}**", progress=progress_bar, progress_args=(callback_query.message, st))
             
-            # رسالة الانتهاء المطلوبة
             final_msg = (
                 f"✨ **Mission Completed | تمت المهمة** ✨\n"
                 f"━━━━━━━━━━━━━━━━━━\n"
@@ -173,11 +179,18 @@ async def download_cb(client, callback_query):
     finally: 
         if os.path.exists(file_path): os.remove(file_path)
 
-# --- Main Execution ---
-if __name__ == "__main__":
-    # تشغيل خادم الويب في الخلفية
+# --- المحرك المطور للتشغيل (The Fix) ---
+async def main():
+    # تشغيل سيرفر Render في خيط منفصل
     threading.Thread(target=run_health_server, daemon=True).start()
     
-    # تشغيل البوت
-    print("Bot is starting...")
-    app.run()
+    # تشغيل البوت بشكل صحيح يتوافق مع بايثون الحديث
+    async with app:
+        print("🚀 البوت يعمل الآن بكامل ميزاته!")
+        await asyncio.Event().wait()
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        pass
